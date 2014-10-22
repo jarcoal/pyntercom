@@ -1,0 +1,4 @@
+recursive-include pyntercom *.py
+recursive-exclude pyntercom *.pyc
+include README.md
+include LICENSE
