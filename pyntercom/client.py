@@ -1,15 +1,13 @@
-import requests
-import json
-from .encoder import JSONEncoder
+from .backend import SyncBackend
 
-class Pyntercom(requests.Session):
+class Pyntercom(object):
     """
     HTTP client for interacting with Intercom.io API.
     """
 
     base_url = 'https://api.intercom.io'
 
-    def __init__(self, app_id, app_key):
+    def __init__(self, app_id, app_key, backend=None):
         """
         Configures the requests session.
 
@@ -18,29 +16,11 @@ class Pyntercom(requests.Session):
 
         * ``app_id``: Application ID
         * ``app_key``: API key
+        * ``backend``: optional - Backend implementation for fulfilling requests
         """
 
-        super(Pyntercom, self).__init__()
-
-        # authentication
         self.auth = (app_id, app_key)
-
-        # headers
-        self.headers['Content-Type'] = 'application/json'
-        self.headers['Accept'] = 'application/json'
-
-    def post(self, path, data):
-        """
-        POST request against the API
-
-        * ``path``: URL path, prefixed with /
-        * ``data``: Data to be json encoded and sent in body        
-        """
-
-        return super(Pyntercom, self).post(
-            url=self.base_url + '/users',
-            data=json.dumps(data, cls=JSONEncoder),
-        )
+        self.backend = backend or SyncBackend()
 
     def save_user(self, **kwargs):
         """
@@ -48,4 +28,15 @@ class Pyntercom(requests.Session):
         http://doc.intercom.io/api/#create-or-update-user
         """
 
-        return self.post('/users', kwargs)
+        return self._send('POST', '/users', kwargs)
+
+    def _send(self, method, url, data=None):
+        """
+        Passes request data to the backend to be fulfilled.
+
+        * ``method``: HTTP verb
+        * ``url``: Endpoint URL
+        * ``data``: optional - data to be JSON encoded and sent in HTTP body
+        """
+
+        self.backend.send(self.auth, method, self.base_url + url, data)
