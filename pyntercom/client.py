@@ -1,4 +1,5 @@
 from .backend import SyncBackend
+from datetime import datetime
 
 class Pyntercom(object):
     """
@@ -28,15 +29,38 @@ class Pyntercom(object):
         http://doc.intercom.io/api/#create-or-update-user
         """
 
-        return self._send('POST', '/users', kwargs)
+        self.backend.send(self.auth, 'POST', self.base_url + '/users', kwargs)
 
-    def _send(self, method, url, data=None):
+    def track_event(self,
+                    user_id=None,
+                    email=None,
+                    event_name=None,
+                    metadata=None,
+                    created_at=None):
+
         """
-        Passes request data to the backend to be fulfilled.
+        Track Event
+        http://doc.intercom.io/api/#event-model
 
-        * ``method``: HTTP verb
-        * ``url``: Endpoint URL
-        * ``data``: optional - data to be JSON encoded and sent in HTTP body
+        * ``user_id``: Your user-assigned identifier.  Required unless email is present.
+        * ``email``: User email.  Required unless user_id is present.
+        * ``event_name``: Name of event
+        * ``metadata``: Additional data to associate with the event (optional)
+        * ``created_at``: Datetime for when this event occured.  Defaults to datetime.now().
         """
 
-        self.backend.send(self.auth, method, self.base_url + url, data)
+        assert user_id or email
+
+        params = {
+            'event_name': event_name,
+            'metadata': metadata,
+            'created_at': created_at or datetime.now(),
+        }
+
+        if user_id:
+            params['user_id'] = user_id
+
+        if email:
+            params['email'] = email
+
+        self.backend.send(self.auth, 'POST', self.base_url + '/events', params)

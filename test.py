@@ -1,7 +1,7 @@
 from unittest import main, TestCase
 from datetime import datetime
 from pyntercom import Pyntercom
-from pyntercom.encoder import JSONEncoder
+from pyntercom.encoder import JSONEncoder, datetime_to_unix_timestamp
 import httmock
 import json
 
@@ -15,6 +15,38 @@ class PyntercomClientTest(TestCase):
     def setUp(self):
         super(PyntercomClientTest, self).setUp()
         self.client = Pyntercom(app_id='abc', app_key='def')
+
+    def test_track_event(self):
+        """Tests the Pyntercom.trackEvent method."""
+
+        created_at = datetime.now()
+
+        mock_payload = {
+            'user_id': 1,
+            'event_name': 'Event',
+            'metadata': {
+                'hello': 'world',
+            },
+            'created_at': datetime_to_unix_timestamp(created_at)
+        }
+
+        @httmock.urlmatch(method='POST', netloc='api.intercom.io', path='/events')
+        def mock_track_event(url, request):
+            result = json.loads(request.body)
+            expected = json.loads(json.dumps(mock_payload, cls=JSONEncoder))
+
+            self.assertEqual(result, expected)
+            return request.body
+
+        with httmock.HTTMock(mock_track_event):
+            self.client.track_event(
+                user_id=1,
+                event_name='Event',
+                metadata={
+                    'hello': 'world',
+                },
+                created_at=created_at,
+            )
 
     def test_save_user(self):
         """POST /users"""
